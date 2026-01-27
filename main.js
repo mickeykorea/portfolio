@@ -58,23 +58,49 @@ rectAreaLight.rotation.x = -0.8;
 const rectAreaLightHelper = new RectAreaLightHelper(rectAreaLight);
 scene.add(rectAreaLight, rectAreaLightHelper);
 
-//Glow Effect
-// const texture = new THREE.TextureLoader().load('./textures/glow.png');
-// const glowGeometry = new THREE.PlaneGeometry(width * 1.2, height * 1.2);
-// const glowMaterial = new THREE.MeshBasicMaterial({
-//     color: 0xffffff,
-//     side: THREE.DoubleSide,
-//     map: texture,
-//     depthTest: false,
-//     blending: THREE.AdditiveBlending,
-//     // opacity: 0.7
-// });
-// const glowPlane = new THREE.Mesh(glowGeometry, glowMaterial);
-// glowPlane.position.copy(rectAreaLight.position);
-// glowPlane.rotation.copy(rectAreaLight.rotation);
-// glowPlane.position.z -= 0.01;
+// Rounded corner glow effect
+function createRoundedRectTexture(texWidth, texHeight, radius) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
 
-// scene.add(glowPlane);
+    const scale = 4;
+    canvas.width = texWidth * scale;
+    canvas.height = texHeight * scale;
+
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, texWidth, texHeight, radius);
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+const cornerRadius = 80; // Higher value = more arc-like (max ~64 for full arc)
+const roundedTexture = createRoundedRectTexture(256, 128, cornerRadius);
+
+const glowGeometry = new THREE.PlaneGeometry(width, height * 1.05);
+const glowMaterial = new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide,
+    map: roundedTexture,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+});
+
+const glowPlane = new THREE.Mesh(glowGeometry, glowMaterial);
+glowPlane.position.copy(rectAreaLight.position);
+glowPlane.rotation.copy(rectAreaLight.rotation);
+glowPlane.position.z += 0.01; // Slightly behind the light
+glowPlane.position.y -= 0.05; // Close the gap with the ground
+glowPlane.scale.y = 0; // Start with 0 height to match light animation
+
+// Hide the default rectangular helper since we have rounded corners now
+rectAreaLightHelper.visible = false;
+
+scene.add(glowPlane);
 
 // const ambientLight = new THREE.AmbientLight(0x404040, 0);
 // scene.add(ambientLight);
@@ -345,6 +371,7 @@ const update = () => {
         const progress = Math.min(elapsedTime / lightAnimationDuration, 1);
         const startHeight = 0;
         rectAreaLight.height = startHeight + (height - startHeight) * progress;
+        glowPlane.scale.y = progress; // Sync glow plane with light animation
 
         if (progress === 1) {
             isLightAnimationComplete = true;
