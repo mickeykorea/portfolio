@@ -451,6 +451,9 @@ function updateYPositions() {
     plane.position.y = -0.65 + y_offset;
     rectAreaLight.position.y = -0.65 + y_offset;
 
+    // Sync glowPlane with rectAreaLight position
+    glowPlane.position.y = rectAreaLight.position.y - 0.05;
+
     if (nameMesh) {
         const nameHeight = nameMesh.geometry.boundingBox.max.y - nameMesh.geometry.boundingBox.min.y;
         nameMesh.position.y = -nameHeight / 2 + y_offset;
