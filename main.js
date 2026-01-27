@@ -58,8 +58,8 @@ rectAreaLight.rotation.x = -0.8;
 const rectAreaLightHelper = new RectAreaLightHelper(rectAreaLight);
 scene.add(rectAreaLight, rectAreaLightHelper);
 
-// Rounded corner glow effect
-function createRoundedRectTexture(texWidth, texHeight, radius) {
+// Squircle (Apple-style continuous corner) glow effect
+function createSquircleTexture(texWidth, texHeight, curvature) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -69,8 +69,34 @@ function createRoundedRectTexture(texWidth, texHeight, radius) {
 
     ctx.scale(scale, scale);
     ctx.fillStyle = 'white';
+
+    // Draw squircle using superellipse formula: |x/a|^n + |y/b|^n = 1
+    // Higher n = more rectangular, lower n = more circular
+    // Apple typically uses n ≈ 4-5 for their icons
+    const n = curvature;
+    const a = texWidth / 2;
+    const b = texHeight / 2;
+    const centerX = texWidth / 2;
+    const centerY = texHeight / 2;
+
     ctx.beginPath();
-    ctx.roundRect(0, 0, texWidth, texHeight, radius);
+    const steps = 360;
+    for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * 2 * Math.PI;
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+
+        // Superellipse parametric form
+        const x = centerX + a * Math.sign(cosA) * Math.pow(Math.abs(cosA), 2 / n);
+        const y = centerY + b * Math.sign(sinA) * Math.pow(Math.abs(sinA), 2 / n);
+
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    }
+    ctx.closePath();
     ctx.fill();
 
     const texture = new THREE.CanvasTexture(canvas);
@@ -78,10 +104,11 @@ function createRoundedRectTexture(texWidth, texHeight, radius) {
     return texture;
 }
 
-const cornerRadius = 80; // Higher value = more arc-like (max ~64 for full arc)
-const roundedTexture = createRoundedRectTexture(256, 128, cornerRadius);
+// Curvature: 2 = perfect ellipse, 4 = Apple squircle, higher = more rectangular
+const squircleCurvature = 2;
+const roundedTexture = createSquircleTexture(256, 128, squircleCurvature);
 
-const glowGeometry = new THREE.PlaneGeometry(width, height * 1.05);
+const glowGeometry = new THREE.PlaneGeometry(width, height * 1.12);
 const glowMaterial = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide,
     map: roundedTexture,
