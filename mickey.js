@@ -1,5 +1,5 @@
 const CONFIG = {
-  bgColor: 0x171616,
+  bgColor: 0x000000,
   subtitleText: "Creative Technologist",
   nameText: "Mickey Oh",
   // subtitleFontUrl: "fonts/SF-Pro-Regular.otf",
