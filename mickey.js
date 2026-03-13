@@ -14,7 +14,7 @@ const CONFIG = {
   // Target world size
   targetNameHeight: 0.6,
   // Particle text
-  particleSize: 2,
+  particleSize: 1.9,
   particleColor: 0xffffff,
   particleDensity: 3,
   particleOpacity: 0.85,
@@ -47,7 +47,19 @@ const CONFIG = {
   rayDriftAmount: 0.12,
   // Camera
   cameraFov: 65,
-  cameraPadding: 3.5,
+  cameraPadding: 3.1,
+};
+
+// ---- Responsive scaling (lerp between phone → MBP 16") ----
+const RESPONSIVE = {
+  refWidth: 1728,       // MBP 16" CSS px (reference, ideal settings)
+  minWidth: 375,        // small phone
+  // [phone, reference]
+  cameraPadding:   [1.3, 3.1],
+  particleDensity: [6, 3],
+  particleSize:    [1.5, 1.9],
+  rayCount:        [20, 65],
+  mouseDisableWidth: 810, // Framer tablet breakpoint
 };
 
 // ---- State ----
@@ -66,6 +78,7 @@ let particleCount = 0;
 let particleBasePos = null;
 let particleDensityArr = null;
 let particlePhaseArr = null;
+let _entranceDone = false;
 // Mouse in world space
 const mouseWorld = { x: 0, y: 0, active: false };
 const _mouseNDC = new THREE.Vector2();
@@ -121,7 +134,7 @@ function initThree() {
 
   // Mouse tracking → world coordinates on Z=0 plane
   canvas.addEventListener("mousemove", (e) => {
-    if (window.innerWidth <= 768) return;
+    if (window.innerWidth < RESPONSIVE.mouseDisableWidth) return;
     _mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
     _mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
     _mouseRay.setFromCamera(_mouseNDC, camera);
@@ -429,22 +442,30 @@ function createParticleText(regularFont, boldFont) {
     particlePhaseArr[i] = Math.random() * Math.PI * 2;
   }
 
-  // Scatter initial positions for entrance animation
-  const scatteredPositions = new Float32Array(worldPositions.length);
-  const spread = CONFIG.entranceSpread;
-  for (let i = 0; i < count; i++) {
-    const idx = i * 3;
-    scatteredPositions[idx] =
-      worldPositions[idx] + (Math.random() - 0.5) * spread;
-    scatteredPositions[idx + 1] =
-      worldPositions[idx + 1] + (Math.random() - 0.5) * spread;
-    scatteredPositions[idx + 2] = worldPositions[idx + 2];
+  // Scatter initial positions for entrance animation (skip on rebuild)
+  let initialPositions;
+  let initialOpacity;
+  if (_entranceDone) {
+    initialPositions = worldPositions;
+    initialOpacity = CONFIG.particleOpacity;
+  } else {
+    initialPositions = new Float32Array(worldPositions.length);
+    const spread = CONFIG.entranceSpread;
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+      initialPositions[idx] =
+        worldPositions[idx] + (Math.random() - 0.5) * spread;
+      initialPositions[idx + 1] =
+        worldPositions[idx + 1] + (Math.random() - 0.5) * spread;
+      initialPositions[idx + 2] = worldPositions[idx + 2];
+    }
+    initialOpacity = CONFIG.entranceOpacity;
   }
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute(
     "position",
-    new THREE.BufferAttribute(scatteredPositions, 3),
+    new THREE.BufferAttribute(initialPositions, 3),
   );
   geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
@@ -452,7 +473,7 @@ function createParticleText(regularFont, boldFont) {
     size: CONFIG.particleSize,
     sizeAttenuation: false,
     transparent: true,
-    opacity: CONFIG.entranceOpacity,
+    opacity: initialOpacity,
     depthWrite: false,
     vertexColors: true,
   });
@@ -613,34 +634,52 @@ function fitCamera() {
 }
 
 // ============================================================
-// Responsive
+// Responsive (proportional lerp across all viewport widths)
 // ============================================================
-function applyResponsive() {
-  const isMobile = window.innerWidth <= 768;
-  const canvas = renderer.domElement;
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
 
+function responsiveT() {
+  const w = window.innerWidth;
+  return Math.max(0, Math.min(1,
+    (w - RESPONSIVE.minWidth) / (RESPONSIVE.refWidth - RESPONSIVE.minWidth)
+  ));
+}
+
+let _rebuildTimer = null;
+function debouncedRebuild() {
+  clearTimeout(_rebuildTimer);
+  _rebuildTimer = setTimeout(rebuildParticleText, 200);
+}
+
+function applyResponsive() {
+  const w = window.innerWidth;
+  const t = responsiveT();
+  const canvas = renderer.domElement;
   const prevDensity = CONFIG.particleDensity;
 
-  if (isMobile) {
+  // Lerp all visual/performance parameters
+  CONFIG.cameraPadding   = lerp(RESPONSIVE.cameraPadding[0],   RESPONSIVE.cameraPadding[1],   t);
+  CONFIG.particleSize    = lerp(RESPONSIVE.particleSize[0],    RESPONSIVE.particleSize[1],    t);
+  CONFIG.rayCount        = Math.round(lerp(RESPONSIVE.rayCount[0], RESPONSIVE.rayCount[1], t));
+  CONFIG.particleDensity = Math.round(lerp(RESPONSIVE.particleDensity[0], RESPONSIVE.particleDensity[1], t));
+
+  // Touch/mouse behavior
+  if (w < RESPONSIVE.mouseDisableWidth) {
     mouseWorld.active = false;
     canvas.style.touchAction = 'pan-y';
     canvas.style.userSelect = 'auto';
-    CONFIG.cameraPadding = 1.5;
-    CONFIG.particleDensity = 5;
-    CONFIG.particleSize = 1.7;
   } else {
     canvas.style.touchAction = 'none';
     canvas.style.userSelect = 'none';
-    CONFIG.cameraPadding = 3.5;
-    CONFIG.particleDensity = 3;
-    CONFIG.particleSize = 2;
   }
 
   if (particlePoints) {
     particlePoints.material.size = CONFIG.particleSize;
   }
   if (prevDensity !== CONFIG.particleDensity) {
-    rebuildParticleText();
+    debouncedRebuild();
   }
 
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -662,7 +701,7 @@ function onResize() {
 // ============================================================
 function initGUI() {
   const gui = new GUI();
-  gui.hide();
+  //regui.hide();
 
   // Particles
   const particleFolder = gui.addFolder("Particles");
@@ -796,6 +835,7 @@ function updateParticles() {
       (CONFIG.particleOpacity - particlePoints.material.opacity) * 0.02;
   } else {
     particlePoints.material.opacity = CONFIG.particleOpacity;
+    if (!_entranceDone) _entranceDone = true;
   }
 
   // Start fading in raycasting once particles reach ~0.75 opacity
