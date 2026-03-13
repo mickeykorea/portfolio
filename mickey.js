@@ -846,9 +846,9 @@ function updateParticles() {
   if (particlePoints.material.opacity >= 0.75) {
     if (lineSegments.material.opacity < CONFIG.rayOpacity) {
       lineSegments.material.opacity +=
-        (CONFIG.rayOpacity - lineSegments.material.opacity) * 0.03;
+        (CONFIG.rayOpacity - lineSegments.material.opacity) * 0.015;
       sphereInstance.material.opacity +=
-        (1 - sphereInstance.material.opacity) * 0.03;
+        (1 - sphereInstance.material.opacity) * 0.015;
     }
   }
 }
