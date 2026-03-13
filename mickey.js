@@ -629,7 +629,7 @@ function fitCamera() {
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
   const desiredWidth = textWorldWidth * CONFIG.cameraPadding;
   const z = desiredWidth / 2 / Math.tan(hFov / 2);
-  camera.position.set(0, -0.03, z);
+  camera.position.set(0, -0.05, z);
   camera.lookAt(0, 0, 0);
 }
 
