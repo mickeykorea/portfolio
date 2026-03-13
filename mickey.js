@@ -50,15 +50,16 @@ const CONFIG = {
   cameraPadding: 3.1,
 };
 
-// ---- Responsive scaling (lerp between phone → MBP 16") ----
+// ---- Responsive scaling (piecewise lerp: phone → MBP 16" → ultrawide) ----
 const RESPONSIVE = {
-  refWidth: 1728,       // MBP 16" CSS px (reference, ideal settings)
   minWidth: 375,        // small phone
-  // [phone, reference]
-  cameraPadding: [1.3, 3.1],
-  particleDensity: [6, 3],
-  particleSize: [1.5, 1.9],
-  rayCount: [20, 65],
+  refWidth: 1728,       // MBP 16" CSS px (reference, ideal settings)
+  maxWidth: 3008,       // ultrawide
+  // [phone, MBP 16", ultrawide]
+  cameraPadding: [1.3, 3.1, 3.6],
+  particleDensity: [5, 3, 3],
+  particleSize: [1.6, 1.9, 1.9],
+  rayCount: [20, 65, 65],
   mouseDisableWidth: 810, // Framer tablet breakpoint
 };
 
@@ -640,11 +641,15 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-function responsiveT() {
+function responsiveLerp(arr) {
   const w = window.innerWidth;
-  return Math.max(0, Math.min(1,
-    (w - RESPONSIVE.minWidth) / (RESPONSIVE.refWidth - RESPONSIVE.minWidth)
-  ));
+  if (w <= RESPONSIVE.refWidth) {
+    const t = Math.max(0, (w - RESPONSIVE.minWidth) / (RESPONSIVE.refWidth - RESPONSIVE.minWidth));
+    return lerp(arr[0], arr[1], t);
+  } else {
+    const t = Math.min(1, (w - RESPONSIVE.refWidth) / (RESPONSIVE.maxWidth - RESPONSIVE.refWidth));
+    return lerp(arr[1], arr[2], t);
+  }
 }
 
 let _rebuildTimer = null;
@@ -655,15 +660,14 @@ function debouncedRebuild() {
 
 function applyResponsive() {
   const w = window.innerWidth;
-  const t = responsiveT();
   const canvas = renderer.domElement;
   const prevDensity = CONFIG.particleDensity;
 
-  // Lerp all visual/performance parameters
-  CONFIG.cameraPadding = lerp(RESPONSIVE.cameraPadding[0], RESPONSIVE.cameraPadding[1], t);
-  CONFIG.particleSize = lerp(RESPONSIVE.particleSize[0], RESPONSIVE.particleSize[1], t);
-  CONFIG.rayCount = Math.round(lerp(RESPONSIVE.rayCount[0], RESPONSIVE.rayCount[1], t));
-  CONFIG.particleDensity = Math.round(lerp(RESPONSIVE.particleDensity[0], RESPONSIVE.particleDensity[1], t));
+  // Piecewise lerp all visual/performance parameters
+  CONFIG.cameraPadding = responsiveLerp(RESPONSIVE.cameraPadding);
+  CONFIG.particleSize = responsiveLerp(RESPONSIVE.particleSize);
+  CONFIG.rayCount = Math.round(responsiveLerp(RESPONSIVE.rayCount));
+  CONFIG.particleDensity = Math.round(responsiveLerp(RESPONSIVE.particleDensity));
 
   // Touch/mouse behavior
   if (w < RESPONSIVE.mouseDisableWidth) {
