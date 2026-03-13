@@ -55,10 +55,10 @@ const RESPONSIVE = {
   refWidth: 1728,       // MBP 16" CSS px (reference, ideal settings)
   minWidth: 375,        // small phone
   // [phone, reference]
-  cameraPadding:   [1.3, 3.1],
+  cameraPadding: [1.3, 3.1],
   particleDensity: [6, 3],
-  particleSize:    [1.5, 1.9],
-  rayCount:        [20, 65],
+  particleSize: [1.5, 1.9],
+  rayCount: [20, 65],
   mouseDisableWidth: 810, // Framer tablet breakpoint
 };
 
@@ -660,9 +660,9 @@ function applyResponsive() {
   const prevDensity = CONFIG.particleDensity;
 
   // Lerp all visual/performance parameters
-  CONFIG.cameraPadding   = lerp(RESPONSIVE.cameraPadding[0],   RESPONSIVE.cameraPadding[1],   t);
-  CONFIG.particleSize    = lerp(RESPONSIVE.particleSize[0],    RESPONSIVE.particleSize[1],    t);
-  CONFIG.rayCount        = Math.round(lerp(RESPONSIVE.rayCount[0], RESPONSIVE.rayCount[1], t));
+  CONFIG.cameraPadding = lerp(RESPONSIVE.cameraPadding[0], RESPONSIVE.cameraPadding[1], t);
+  CONFIG.particleSize = lerp(RESPONSIVE.particleSize[0], RESPONSIVE.particleSize[1], t);
+  CONFIG.rayCount = Math.round(lerp(RESPONSIVE.rayCount[0], RESPONSIVE.rayCount[1], t));
   CONFIG.particleDensity = Math.round(lerp(RESPONSIVE.particleDensity[0], RESPONSIVE.particleDensity[1], t));
 
   // Touch/mouse behavior
@@ -701,7 +701,7 @@ function onResize() {
 // ============================================================
 function initGUI() {
   const gui = new GUI();
-  //regui.hide();
+  regui.hide();
 
   // Particles
   const particleFolder = gui.addFolder("Particles");
