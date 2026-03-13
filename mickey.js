@@ -701,7 +701,7 @@ function onResize() {
 // ============================================================
 function initGUI() {
   const gui = new GUI();
-  regui.hide();
+  gui.hide();
 
   // Particles
   const particleFolder = gui.addFolder("Particles");
